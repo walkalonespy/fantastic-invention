@@ -22,6 +22,12 @@
         .custom-scrollbar::-webkit-scrollbar { width: 5px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 20px; }
+        
+        /* เพิ่มสไตล์สำหรับ input ที่ยังไม่ได้กรอก */
+        .input-error {
+            border-color: #ef4444 !important;
+            background-color: #fef2f2 !important;
+        }
     </style>
 </head>
 <body>
@@ -30,7 +36,6 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // ส่วนประกอบสำหรับแสดงผลไอคอน Lucide ในเบราว์เซอร์
         const Icon = ({ name, size = 24, className = "" }) => {
             useEffect(() => {
                 if (window.lucide) window.lucide.createIcons();
@@ -68,6 +73,11 @@
             ];
 
             const totalPrice = useMemo(() => cart.reduce((sum, item) => sum + (item.price * item.quantity), 0), [cart]);
+
+            // ตรวจสอบว่ากรอกข้อมูลครบถ้วนหรือไม่
+            const isCustomerInfoComplete = useMemo(() => {
+                return customer.name.trim() !== '' && customer.phone.trim().length >= 9;
+            }, [customer]);
 
             const addToCart = (service) => {
                 const existing = cart.find(item => item.id === service.id);
@@ -112,8 +122,8 @@
             };
 
             const handleSubmitOrder = async () => {
-                if (!customer.name || !customer.phone) {
-                    setError("กรุณากรอกข้อมูลชื่อและเบอร์โทรศัพท์ให้ครบถ้วน");
+                if (!isCustomerInfoComplete) {
+                    setError("กรุณากรอกข้อมูลชื่อและเบอร์โทรศัพท์ให้ครบถ้วนก่อนส่งรายการ");
                     return;
                 }
                 setIsSubmitting(true);
@@ -218,7 +228,7 @@
                     <main className="max-w-5xl mx-auto px-4 py-8">
                         {activeTab === 'track' ? renderTrackingView() : (
                             !isPaymentStep ? (
-                                <div className="grid lg:grid-cols-3 gap-8">
+                                <div className="grid lg:grid-cols-3 gap-8 animate-in fade-in duration-300">
                                     <div className="lg:col-span-2 space-y-6">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             {defaultServices.map(item => (
@@ -245,7 +255,7 @@
                                     </div>
                                     <div className="lg:col-span-1">
                                         <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100 sticky top-28">
-                                            <h2 className="text-xl font-bold mb-8 flex items-center gap-3 font-bold"><Icon name="shopping-cart" size={22} className="text-blue-600" /> ตะกร้าซ่อมผ้า</h2>
+                                            <h2 className="text-xl font-bold mb-8 flex items-center gap-3 font-bold"><Icon name="shopping-cart" className="text-blue-600" /> ตะกร้าซ่อมผ้า</h2>
                                             {cart.length === 0 ? <p className="text-center text-gray-400 py-16 bg-slate-50 rounded-3xl border-2 border-dashed border-gray-100 text-sm font-medium">กรุณาเลือกรายการซ่อม</p> : (
                                                 <div className="space-y-6">
                                                     <div className="max-h-[350px] overflow-y-auto pr-2 space-y-5 custom-scrollbar">
@@ -279,30 +289,79 @@
                                     </div>
                                 </div>
                             ) : (
-                                <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
+                                <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8 animate-in fade-in zoom-in duration-300">
                                     <div className="space-y-6">
-                                        <button onClick={() => setIsPaymentStep(false)} className="text-gray-500 flex items-center gap-2 hover:text-blue-600 transition font-bold">← ย้อนกลับ</button>
-                                        <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm">
-                                            <h3 className="text-xl font-black mb-8 flex items-center gap-3 text-gray-800"><Icon name="user" size={24} className="text-blue-600"/> ข้อมูลผู้รับบริการ</h3>
-                                            <input type="text" placeholder="ชื่อ-นามสกุล" value={customer.name} onChange={e=>setCustomer({...customer, name: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 mb-4 outline-none focus:ring-2 ring-blue-500 transition shadow-inner" />
-                                            <input type="tel" placeholder="เบอร์โทรศัพท์" value={customer.phone} onChange={e=>setCustomer({...customer, phone: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-none focus:ring-2 ring-blue-500 transition shadow-inner" />
+                                        <button onClick={() => setIsPaymentStep(false)} className="text-gray-500 flex items-center gap-2 font-bold hover:text-blue-600 transition">← ย้อนกลับไปเลือกรายการ</button>
+                                        <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm relative">
+                                            <h3 className="text-xl font-black mb-8 flex items-center gap-3 text-gray-800"><Icon name="user" size={24} className="text-blue-600"/> ข้อมูลผู้รับบริการ <span className="text-red-500 text-sm font-normal">*จำเป็น</span></h3>
+                                            <div className="space-y-6">
+                                                <div>
+                                                    <label className="text-xs font-bold text-gray-400 uppercase block mb-1">ชื่อ-นามสกุล</label>
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder="ระบุชื่อของคุณ" 
+                                                        value={customer.name} 
+                                                        onChange={e=>setCustomer({...customer, name: e.target.value})} 
+                                                        className={`w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-none focus:ring-2 ring-blue-500 transition shadow-inner ${!customer.name && 'border-amber-200'}`} 
+                                                    />
+                                                    {!customer.name && <p className="text-[10px] text-amber-600 mt-1 font-bold">กรุณาระบุชื่อผู้ติดต่อ</p>}
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs font-bold text-gray-400 uppercase block mb-1">เบอร์โทรศัพท์ (สำคัญสำหรับเช็คสถานะ)</label>
+                                                    <input 
+                                                        type="tel" 
+                                                        placeholder="08X-XXX-XXXX" 
+                                                        value={customer.phone} 
+                                                        onChange={e=>setCustomer({...customer, phone: e.target.value})} 
+                                                        className={`w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-none focus:ring-2 ring-blue-500 transition shadow-inner ${customer.phone.length < 9 && 'border-amber-200'}`} 
+                                                    />
+                                                    {customer.phone.length < 9 && <p className="text-[10px] text-amber-600 mt-1 font-bold">กรุณาระบุเบอร์โทรศัพท์ที่ถูกต้อง</p>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="bg-indigo-50 p-6 rounded-3xl border border-indigo-100 flex justify-between items-center font-bold shadow-sm">
+                                            <span className="text-indigo-800">ยอดชำระเงินทั้งหมด:</span>
+                                            <span className="text-2xl text-indigo-900">฿{totalPrice.toLocaleString()}</span>
                                         </div>
                                     </div>
                                     <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-blue-50 text-center flex flex-col items-center">
-                                        <h3 className="text-2xl font-black mb-1">ชำระเงิน</h3>
-                                        <p className="text-gray-400 text-sm mb-8">สแกนจ่ายผ่านแอปธนาคาร</p>
+                                        <h3 className="text-2xl font-black mb-1">ชำระเงินผ่าน PromptPay</h3>
+                                        <p className="text-gray-400 text-sm mb-8 font-medium">สแกนจ่ายผ่านแอปธนาคาร</p>
                                         <div className="bg-slate-50 p-6 rounded-[2rem] mb-8 w-full max-w-[280px] border border-slate-100 shadow-inner">
                                             <div className="bg-white p-3 rounded-2xl shadow-sm">
-                                                <img src={`https://promptpay.io/1819900114907/${totalPrice}.png`} className="w-full rounded-xl" alt="QR Code" />
+                                                <img src={`https://promptpay.io/1819900114907/${totalPrice}.png`} className="w-full aspect-square object-contain rounded-xl" alt="QR Code" />
                                             </div>
                                             <div className="pt-5 mt-5 border-t border-slate-200 text-center">
                                                 <p className="text-xl font-black text-slate-800 leading-none">181-9900114-907</p>
                                                 <p className="text-xs text-blue-700 font-black uppercase tracking-widest mt-2">ปรีดาบริการซ่อมผ้า</p>
                                             </div>
                                         </div>
-                                        <button onClick={handleSubmitOrder} disabled={isSubmitting} className="w-full py-5 rounded-2xl font-black bg-green-600 text-white shadow-xl active:scale-95 transition text-lg flex items-center justify-center gap-2">
-                                            {isSubmitting ? "กำลังบันทึก..." : "แจ้งโอนและส่งรายการซ่อม"}
+                                        
+                                        {/* แจ้งเตือนเมื่อข้อมูลไม่ครบ */}
+                                        {!isCustomerInfoComplete && (
+                                            <div className="bg-amber-50 text-amber-700 px-4 py-3 rounded-xl text-xs font-bold mb-4 flex items-center gap-2 border border-amber-100 animate-pulse">
+                                                <Icon name="alert-circle" size={16} />
+                                                กรุณากรอกข้อมูลผู้รับบริการให้ครบเพื่อเปิดปุ่มส่งงาน
+                                            </div>
+                                        )}
+
+                                        <button 
+                                            onClick={handleSubmitOrder} 
+                                            disabled={isSubmitting || !isCustomerInfoComplete} 
+                                            className={`w-full py-5 rounded-2xl font-black text-white shadow-xl transition-all text-lg flex items-center justify-center gap-2 ${
+                                                isSubmitting || !isCustomerInfoComplete 
+                                                ? 'bg-slate-300 cursor-not-allowed grayscale' 
+                                                : 'bg-green-600 active:scale-95 hover:bg-green-700'
+                                            }`}
+                                        >
+                                            {isSubmitting ? (
+                                                <><Icon name="loader-2" className="animate-spin" /> กำลังบันทึก...</>
+                                            ) : (
+                                                <><Icon name="check" size={22} /> แจ้งโอนและส่งรายการซ่อม</>
+                                            )}
                                         </button>
+                                        
+                                        {error && <p className="mt-4 text-red-500 text-xs font-bold">{error}</p>}
                                     </div>
                                 </div>
                             )
